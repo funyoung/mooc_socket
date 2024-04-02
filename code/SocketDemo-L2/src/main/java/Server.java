@@ -5,6 +5,13 @@ import java.io.PrintStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+/**
+ * Socket服务器端套接字基本Demo
+ * 1. 创建服务端socket对象，使用端口号2000，然后打印两行就绪状态信息，阻塞等待，直到有客户端连接。
+ * 2. 循环等待客户端连接后，以socket对象作为参数，构造客户端Handler异步线程对象，并启动之。
+ *    a) 客户端Handler线程从socket逐行读入流，根据读入内容为"bye"时回送原文给客户端，并结束运行，否则
+ *    b) 回送读到字符串长度给客户端后等待接收下一行新数据流。
+ */
 public class Server {
     public static void main(String[] args) throws IOException {
         ServerSocket server = new ServerSocket(2000);
