@@ -81,68 +81,19 @@ public class Server {
             System.out.println("新客户端连接：" + socket.getInetAddress() +
                     " P:" + socket.getPort());
 
-            try {
-                // 得到套接字流
-                OutputStream outputStream = socket.getOutputStream();
-                InputStream inputStream = socket.getInputStream();
-
-                byte[] buffer = new byte[256];
-                int readCount = inputStream.read(buffer);
-                ByteBuffer byteBuffer = ByteBuffer.wrap(buffer, 0, readCount);
-
-                // byte
-                byte be = byteBuffer.get();
-
-                // char
-                char c = byteBuffer.getChar();
-
-                // int
-                int i = byteBuffer.getInt();
-
-                // bool
-                boolean b = byteBuffer.get() == 1;
-
-                // Long
-                long l = byteBuffer.getLong();
-
-                // float
-                float f = byteBuffer.getFloat();
-
-                // double
-                double d = byteBuffer.getDouble();
-
-                // String
-                int pos = byteBuffer.position();
-                String str = new String(buffer, pos, readCount - pos - 1);
-
-                System.out.println("收到数量：" + readCount + " 数据："
-                        + be + "\n"
-                        + c + "\n"
-                        + i + "\n"
-                        + b + "\n"
-                        + l + "\n"
-                        + f + "\n"
-                        + d + "\n"
-                        + str + "\n");
-
-                outputStream.write(buffer, 0, readCount);
-                outputStream.close();
-                inputStream.close();
-
+            // 得到套接字流
+            try (InputStream inputStream = socket.getInputStream();
+                 OutputStream outputStream = socket.getOutputStream()) {
+                Tools.response(inputStream, outputStream);
             } catch (Exception e) {
                 System.out.println("连接异常断开");
             } finally {
                 // 连接关闭
-                try {
-                    socket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                Tools.close(socket);
             }
 
             System.out.println("客户端已退出：" + socket.getInetAddress() +
                     " P:" + socket.getPort());
-
         }
     }
 }

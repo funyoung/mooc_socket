@@ -31,7 +31,7 @@ public class Client {
         }
 
         // 释放资源
-        socket.close();
+        Tools.close(socket);
         System.out.println("客户端已退出～");
 
     }
@@ -96,56 +96,51 @@ public class Client {
 
     private static void todo(Socket client) throws IOException {
         // 得到Socket输出流
-        OutputStream outputStream = client.getOutputStream();
-
-
         // 得到Socket输入流
-        InputStream inputStream = client.getInputStream();
-        byte[] buffer = new byte[256];
-        ByteBuffer byteBuffer = ByteBuffer.wrap(buffer);
+        try (OutputStream outputStream = client.getOutputStream();
+             InputStream inputStream = client.getInputStream()) {
+            byte[] buffer = new byte[256];
+            ByteBuffer byteBuffer = ByteBuffer.wrap(buffer);
 
-        // byte
-        byteBuffer.put((byte) 126);
+            // byte
+            byteBuffer.put((byte) 126);
 
-        // char
-        char c = 'a';
-        byteBuffer.putChar(c);
+            // char
+            char c = 'a';
+            byteBuffer.putChar(c);
 
-        // int
-        int i = 2323123;
-        byteBuffer.putInt(i);
+            // int
+            int i = 2323123;
+            byteBuffer.putInt(i);
 
-        // bool
-        boolean b = true;
-        byteBuffer.put(b ? (byte) 1 : (byte) 0);
+            // bool
+            boolean b = true;
+            byteBuffer.put(b ? (byte) 1 : (byte) 0);
 
-        // Long
-        long l = 298789739;
-        byteBuffer.putLong(l);
-
-
-        // float
-        float f = 12.345f;
-        byteBuffer.putFloat(f);
+            // Long
+            long l = 298789739;
+            byteBuffer.putLong(l);
 
 
-        // double
-        double d = 13.31241248782973;
-        byteBuffer.putDouble(d);
+            // float
+            float f = 12.345f;
+            byteBuffer.putFloat(f);
 
-        // String
-        String str = "Hello你好！";
-        byteBuffer.put(str.getBytes());
 
-        // 发送到服务器
-        outputStream.write(buffer, 0, byteBuffer.position() + 1);
+            // double
+            double d = 13.31241248782973;
+            byteBuffer.putDouble(d);
 
-        // 接收服务器返回
-        int read = inputStream.read(buffer);
-        System.out.println("收到数量：" + read);
+            // String
+            String str = "Hello你好！";
+            byteBuffer.put(str.getBytes());
 
-        // 资源释放
-        outputStream.close();
-        inputStream.close();
+            // 发送到服务器
+            outputStream.write(buffer, 0, byteBuffer.position() + 1);
+
+            // 接收服务器返回
+            int read = inputStream.read(buffer);
+            System.out.println("收到数量：" + read);
+        }
     }
 }
