@@ -1,7 +1,6 @@
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -10,8 +9,8 @@ import java.util.concurrent.CountDownLatch;
  * UDP 搜索者，用于搜索服务支持方
  */
 public class UDPSearcher {
+    private static final String BROADCAST_NAME = "255.255.255.255";
     private static final int LISTEN_PORT = 30000;
-
 
     public static void main(String[] args) throws IOException, InterruptedException {
         System.out.println("UDPSearcher Started.");
@@ -20,6 +19,7 @@ public class UDPSearcher {
         sendBroadcast();
 
         // 读取任意键盘信息后可以退出
+        System.out.println("\n【广播发送完毕，下面实时刷新收到的回包信息】按下回车键打印全部搜索结果并退出...\n");
         //noinspection ResultOfMethodCallIgnored
         System.in.read();
 
@@ -33,6 +33,7 @@ public class UDPSearcher {
         System.out.println("UDPSearcher Finished.");
     }
 
+    // 监听端口号LISTEN_PORT，并使用CountDownLatch等待监听任务线程执行完成后再返回。
     private static Listener listen() throws InterruptedException {
         System.out.println("UDPSearcher start listen.");
         CountDownLatch countDownLatch = new CountDownLatch(1);
@@ -46,47 +47,14 @@ public class UDPSearcher {
     private static void sendBroadcast() throws IOException {
         System.out.println("UDPSearcher sendBroadcast started.");
 
-        // 作为搜索方，让系统自动分配端口
-        DatagramSocket ds = new DatagramSocket();
-
-
-        // 构建一份请求数据
-        String requestData = MessageCreator.buildWithPort(LISTEN_PORT);
-        byte[] requestDataBytes = requestData.getBytes();
-        // 直接构建packet
-        DatagramPacket requestPacket = new DatagramPacket(requestDataBytes,
-                requestDataBytes.length);
-        // 20000端口, 广播地址
-        requestPacket.setAddress(InetAddress.getByName("255.255.255.255"));
-        requestPacket.setPort(20000);
-
-        // 发送
-        ds.send(requestPacket);
-        ds.close();
+        // 作为搜索方，让系统自动分配端口, 创建广播数据报文后，发送出去。
+        try(DatagramSocket ds = new DatagramSocket()) {
+            DatagramPacket requestPacket = UdpUtil.buildBroadcastPacket(BROADCAST_NAME, UdpUtil.UDP_PROVIDER_PORT, LISTEN_PORT);
+            ds.send(requestPacket);
+        }
 
         // 完成
         System.out.println("UDPSearcher sendBroadcast finished.");
-    }
-
-    private static class Device {
-        final int port;
-        final String ip;
-        final String sn;
-
-        private Device(int port, String ip, String sn) {
-            this.port = port;
-            this.ip = ip;
-            this.sn = sn;
-        }
-
-        @Override
-        public String toString() {
-            return "Device{" +
-                    "port=" + port +
-                    ", ip='" + ip + '\'' +
-                    ", sn='" + sn + '\'' +
-                    '}';
-        }
     }
 
     private static class Listener extends Thread {
@@ -113,27 +81,13 @@ public class UDPSearcher {
                 // 监听回送端口
                 ds = new DatagramSocket(listenPort);
 
-
                 while (!done) {
                     // 构建接收实体
-                    final byte[] buf = new byte[512];
-                    DatagramPacket receivePack = new DatagramPacket(buf, buf.length);
-
-                    // 接收
-                    ds.receive(receivePack);
+                    DatagramPacket receivePack = UdpUtil.fetchPack(ds);
 
                     // 打印接收到的信息与发送者的信息
-                    // 发送者的IP地址
-                    String ip = receivePack.getAddress().getHostAddress();
-                    int port = receivePack.getPort();
-                    int dataLen = receivePack.getLength();
-                    String data = new String(receivePack.getData(), 0, dataLen);
-                    System.out.println("UDPSearcher receive form ip:" + ip
-                            + "\tport:" + port + "\tdata:" + data);
-
-                    String sn = MessageCreator.parseSn(data);
-                    if (sn != null) {
-                        Device device = new Device(port, ip, sn);
+                    Device device = UdpUtil.parseDevice(receivePack);
+                    if (null != device) {
                         devices.add(device);
                     }
                 }

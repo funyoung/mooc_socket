@@ -13,33 +13,32 @@ import java.net.Socket;
  *    b) 回送读到字符串长度给客户端后等待接收下一行新数据流。
  */
 public class Server {
+    private static final int PORT = 2000;
+
+    // 指定端口号初始化服务端Socket后，一直监听并处理客户端的连接请求。
     public static void main(String[] args) throws IOException {
-        ServerSocket server = new ServerSocket(2000);
-
-
-        System.out.println("服务器准备就绪～");
-        System.out.println("服务器信息：" + server.getInetAddress() + " P:" + server.getLocalPort());
-
-
-        // 等待客户端连接
-        for (; ; ) {
-            // 得到客户端
-            Socket client = server.accept();
-            // 客户端构建异步线程
-            ClientHandler clientHandler = new ClientHandler(client);
-            // 启动线程
-            clientHandler.start();
+        try (ServerSocket server = SocketUtil.initSocketServer(PORT)) {
+            for ( ; ; ) {
+                listeningForClient(server);
+            }
         }
+    }
 
+    // 监听接收客户端的连接请求，并运行独立的handler线程响应每个客户端请求。
+    private static void listeningForClient(ServerSocket server) throws IOException {
+        // 得到客户端
+        Socket client = server.accept();
+        // 客户端构建异步线程
+        ClientHandler clientHandler = new ClientHandler(client);
+        // 启动线程
+        clientHandler.start();
     }
 
     /**
-     * 客户端消息处理
+     * 客户端消息处理，每个客户端运行在一个独立的线程中。
      */
     private static class ClientHandler extends Thread {
         private Socket socket;
-        private boolean flag = true;
-
         ClientHandler(Socket socket) {
             this.socket = socket;
         }
@@ -50,31 +49,12 @@ public class Server {
             System.out.println("新客户端连接：" + socket.getInetAddress() +
                     " P:" + socket.getPort());
 
-            try {
-                // 得到打印流，用于数据输出；服务器回送数据使用
-                PrintStream socketOutput = new PrintStream(socket.getOutputStream());
-                // 得到输入流，用于接收数据
-                BufferedReader socketInput = new BufferedReader(new InputStreamReader(
-                        socket.getInputStream()));
-
-                do {
-                    // 客户端拿到一条数据
-                    String str = socketInput.readLine();
-                    if ("bye".equalsIgnoreCase(str)) {
-                        flag = false;
-                        // 回送
-                        socketOutput.println("bye");
-                    } else {
-                        // 打印到屏幕。并回送数据长度
-                        System.out.println(str);
-                        socketOutput.println("回送：" + str.length());
-                    }
-
-                } while (flag);
-
-                socketInput.close();
-                socketOutput.close();
-
+            // 得到打印流，用于数据输出；服务器回送数据使用
+            // 得到输入流，用于接收数据
+            try (PrintStream socketOutput = new PrintStream(socket.getOutputStream());
+                 BufferedReader socketInput = new BufferedReader(new InputStreamReader(
+                         socket.getInputStream()))) {
+                SocketUtil.serverResponseLoop(socketInput, socketOutput);
             } catch (Exception e) {
                 System.out.println("连接异常断开");
             } finally {
