@@ -8,6 +8,7 @@ public class Server {
     public static void main(String[] args) {
         ServerProvider.start(TCPConstants.PORT_SERVER);
 
+        System.out.println("【Server press ENTER to stop provider】");
         try {
             //noinspection ResultOfMethodCallIgnored
             System.in.read();
